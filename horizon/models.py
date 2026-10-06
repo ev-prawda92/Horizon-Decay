@@ -32,9 +32,14 @@ class AnthropicModel:
     def __init__(self, model: str, temperature: float = 0.0):
         import anthropic
 
+        import inspect
+
         self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         self.name = model
-        self.temperature = temperature
+        # Newer SDK versions no longer accept `temperature`; use it only if supported.
+        supported = "temperature" in inspect.signature(self.client.messages.create).parameters
+        self.sampling = {"temperature": temperature} if supported else {}
+        self.sampling_note = f"temperature={temperature}" if supported else "provider default sampling"
 
     def complete(self, system: str, prompt: str, max_tokens: int) -> str:
         def call():
@@ -42,8 +47,8 @@ class AnthropicModel:
                 model=self.name,
                 system=system,
                 max_tokens=max_tokens,
-                temperature=self.temperature,
                 messages=[{"role": "user", "content": prompt}],
+                **self.sampling,
             )
             return "".join(b.text for b in r.content if getattr(b, "type", "") == "text")
 
@@ -56,19 +61,27 @@ class OpenAIModel:
 
         self.client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         self.name = model
-        self.temperature = temperature
+        self.sampling = {"temperature": temperature}
+        self.sampling_note = f"temperature={temperature}"
 
     def complete(self, system: str, prompt: str, max_tokens: int) -> str:
         def call():
-            r = self.client.chat.completions.create(
+            kwargs = dict(
                 model=self.name,
-                temperature=self.temperature,
                 max_completion_tokens=max_tokens,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": prompt},
                 ],
             )
+            try:
+                r = self.client.chat.completions.create(**kwargs, **self.sampling)
+            except Exception as e:
+                if not self.sampling or "temperature" not in str(e):
+                    raise
+                # Some models only allow their default sampling.
+                self.sampling, self.sampling_note = {}, "provider default sampling"
+                r = self.client.chat.completions.create(**kwargs)
             return r.choices[0].message.content or ""
 
         return _retry(call)

@@ -83,6 +83,7 @@ def run_trial(model: Model, task: Task, condition: str, chunk: int) -> dict:
         raise ValueError(condition)
     return {
         "model": model.name,
+        "sampling": getattr(model, "sampling_note", None),
         "condition": condition,
         "chunk": chunk if condition == "reset" else None,
         "task_id": task.task_id,

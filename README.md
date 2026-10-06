@@ -98,6 +98,7 @@ results/sim/         validation run on simulated models
 - **Reasoning models.** Models that think before answering may do the tracking in hidden reasoning, so the written trace may not show where the error first happened. Report these separately, and treat `direct` as the cleaner comparison for them.
 - **Linear fit.** The depth effect may not be linear. The binned plot is the primary evidence; the slope is a summary.
 - **Format failures** are counted as unscorable steps and reported (`unparsed`), not counted as errors.
+- **Sampling.** Current Anthropic SDKs no longer accept a temperature setting, and some OpenAI models allow only their default. Those runs use the provider's default sampling, which adds trial-to-trial noise; each trial records the setting it used (`sampling`). This adds variance but not bias, because conditions are compared on identical tasks under identical settings.
 
 ## Related work
 
