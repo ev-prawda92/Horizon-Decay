@@ -106,6 +106,16 @@ def main(argv: list[str] | None = None) -> None:
     args = ap.parse_args(argv)
 
     model = load_model(args.model)
+    try:
+        if not args.model.startswith("sim:"):
+            model.complete(SYSTEM, "Reply with the word OK.", 16)
+    except Exception as e:
+        raise SystemExit(
+            f"Preflight call to {args.model} failed, so nothing was run.\n"
+            f"  {type(e).__name__}: {e}\n"
+            "Check that the API key is set (Colab: Secrets panel, notebook access on) "
+            "and that the model ID is correct."
+        )
     jobs = [
         (make_task(n, args.registers, seed=1000 * n + t), c)
         for n in args.lengths
@@ -114,15 +124,23 @@ def main(argv: list[str] | None = None) -> None:
     ]
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    done = 0
+    done = failed = 0
     with out.open("a") as f, ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(run_trial, model, task, c, args.chunk) for task, c in jobs]
+        futures = {pool.submit(run_trial, model, task, c, args.chunk): (task, c) for task, c in jobs}
         for fut in as_completed(futures):
-            f.write(json.dumps(fut.result()) + "\n")
-            f.flush()
             done += 1
+            try:
+                f.write(json.dumps(fut.result()) + "\n")
+                f.flush()
+            except Exception as e:
+                failed += 1
+                task, c = futures[fut]
+                print(f"FAILED {task.task_id} [{c}]: {type(e).__name__}: {e}", flush=True)
+                if failed >= 10 and failed == done:
+                    pool.shutdown(cancel_futures=True)
+                    raise SystemExit("First 10 trials all failed; stopping. See errors above.")
             if done % max(25, len(jobs) // 10) == 0 or done == len(jobs):
-                print(f"{done}/{len(jobs)} trials", flush=True)
+                print(f"{done}/{len(jobs)} trials ({failed} failed)", flush=True)
 
 
 if __name__ == "__main__":

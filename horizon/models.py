@@ -21,8 +21,9 @@ def _retry(fn, attempts: int = 5):
     for i in range(attempts):
         try:
             return fn()
-        except Exception:
-            if i == attempts - 1:
+        except Exception as e:
+            status = getattr(e, "status_code", None)
+            if i == attempts - 1 or status in (400, 401, 403, 404):
                 raise
             time.sleep(2 ** i + random.random())
 
