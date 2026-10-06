@@ -34,7 +34,10 @@ class AnthropicModel:
 
         import inspect
 
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        # Keys not scoped to a workspace must name one via this header.
+        workspace = os.environ.get("ANTHROPIC_WORKSPACE_ID")
+        headers = {"anthropic-workspace-id": workspace} if workspace else None
+        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"], default_headers=headers)
         self.name = model
         # Newer SDK versions no longer accept `temperature`; use it only if supported.
         supported = "temperature" in inspect.signature(self.client.messages.create).parameters
