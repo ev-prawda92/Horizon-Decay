@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> None:
             f.flush()
             done += 1
             if done % max(25, len(jobs) // 10) == 0 or done == len(jobs):
-                print(f"{done}/{len(jobs)} trials")
+                print(f"{done}/{len(jobs)} trials", flush=True)
 
 
 if __name__ == "__main__":
