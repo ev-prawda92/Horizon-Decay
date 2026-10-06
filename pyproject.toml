@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "horizon-decay"
+version = "0.1.0"
+description = "Does LLM per-step error rise with task depth? Compounding vs context degradation."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Evan Prawda", email = "evanprawda92@gmail.com" }]
+dependencies = ["numpy", "pandas", "matplotlib", "tabulate"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic"]
+openai = ["openai"]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["horizon"]
